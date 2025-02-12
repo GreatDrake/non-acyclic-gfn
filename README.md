@@ -1,6 +1,6 @@
 # Revisiting Non-Acyclic GFlowNets in Discrete Environments
 
-Official code for the paper [Revisiting Non-Acyclic GFlowNets in Discrete Environments](https://github.com/GreatDrake/non-acyclic-gfn).
+Official code for the paper [Revisiting Non-Acyclic GFlowNets in Discrete Environments](https://arxiv.org/abs/2502.07735).
 
 Nikita Morozov*, Ian Maksimov*, Daniil Tiapkin, Sergey Samsonov.
 
