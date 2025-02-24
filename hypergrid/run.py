@@ -1,18 +1,12 @@
-import numpy as np
-import itertools
-from scipy.stats import norm
-
 import torch
 import torch.nn as nn
 from torch.distributions.categorical import Categorical
 import numpy as np
 import itertools
-from scipy.stats import norm
 from tqdm import tqdm
-
 import argparse
-
 from collections import OrderedDict
+
 
 parser = argparse.ArgumentParser()
 
@@ -120,10 +114,10 @@ def train(args, model, opt, log_Z, log_Z_opt, true_distribution, batch_size=16, 
         backward_stop_log_probs = log_pbs[:, -1]
 
         # - args.dim * np.log(args.side) corresponds to log PF(s1 | s0) = log 1 / number of states in grid
-        if args.loss_flow_scale == "LogFlow":
+        if args.loss_scale == "LogFlow":
             forward_flow = torch.zeros_like(log_flows) + log_Z.sum() - args.dim * np.log(args.side)
             backward_flow = log_flows + backward_stop_log_probs
-        elif args.loss_flow_scale == "Flow":
+        elif args.loss_scale == "Flow":
             forward_flow = torch.exp(torch.zeros_like(log_flows) + log_Z.sum() - args.dim * np.log(args.side))
             backward_flow = torch.exp(log_flows + backward_stop_log_probs)
 
@@ -173,10 +167,10 @@ def train(args, model, opt, log_Z, log_Z_opt, true_distribution, batch_size=16, 
             # mask for the loss calculation to avoid trajectories that already finished
             loss_mask = ~dones
 
-            if args.loss_flow_scale == "LogFlow":
+            if args.loss_scale == "LogFlow":
                 forward_flow = log_flows + log_forward_policy
                 backward_flow = log_flows_next + log_backward_policy
-            elif args.loss_flow_scale == "Flow":
+            elif args.loss_scale == "Flow":
                 forward_flow = torch.exp(log_flows + log_forward_policy)
                 backward_flow = torch.exp(log_flows_next + log_backward_policy)
 
@@ -212,9 +206,9 @@ def train(args, model, opt, log_Z, log_Z_opt, true_distribution, batch_size=16, 
             mean_traj_len_history.append(np.mean(traj_len_history[-1000:]))
             log_Z_history.append(log_Z.sum().detach().item())
             
-            np.save(f"{args.save_dir}/{args.name}_{args.seed}_{args.loss}_{args.loss_flow_scale}_seed{args.seed}_standard_{args.dim}_{args.side}_l1.npy", np.array(l1_history))
-            np.save(f"{args.save_dir}/{args.name}_{args.seed}_{args.loss}_{args.loss_flow_scale}_seed{args.seed}_standard_{args.dim}_{args.side}_trajlen.npy", np.array(mean_traj_len_history))
-            np.save(f"{args.save_dir}/{args.name}_{args.seed}_{args.loss}_{args.loss_flow_scale}_seed{args.seed}_standard_{args.dim}_{args.side}_logz.npy", np.array(log_Z_history))
+            np.save(f"{args.save_dir}/{args.name}_{args.seed}_{args.loss}_{args.loss_scale}_seed{args.seed}_standard_{args.dim}_{args.side}_l1.npy", np.array(l1_history))
+            np.save(f"{args.save_dir}/{args.name}_{args.seed}_{args.loss}_{args.loss_scale}_seed{args.seed}_standard_{args.dim}_{args.side}_trajlen.npy", np.array(mean_traj_len_history))
+            np.save(f"{args.save_dir}/{args.name}_{args.seed}_{args.loss}_{args.loss_scale}_seed{args.seed}_standard_{args.dim}_{args.side}_logz.npy", np.array(log_Z_history))
                 
     return l1_history, mean_traj_len_history, log_Z_history
 
