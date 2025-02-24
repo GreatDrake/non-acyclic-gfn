@@ -21,4 +21,18 @@ Example of training with `DB` loss in `log-flow` scale and `state flow regulariz
 python run.py --dim 4 --side 20 --loss DB --loss_scale LogFlow --reg_coef 0.001 --name db --save_dir results
 ```
 
-### Repository is under construction 🚧 🔨
+## Permutations 
+
+#### Under construction 🚧 🔨
+
+## Citation
+
+```
+@article{morozov2025revisiting,
+  title={Revisiting Non-Acyclic GFlowNets in Discrete Environments},
+  author={Morozov, Nikita and Maksimov, Ian and Tiapkin, Daniil and Samsonov, Sergey},
+  journal={arXiv preprint arXiv:2502.07735},
+  year={2025}
+}
+```
+
