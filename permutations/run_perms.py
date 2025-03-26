@@ -5,9 +5,9 @@ import numpy as np
 from env import PermutationEnv
 import argparse
 import torch.nn as nn
-from permutations.losses import GFlowLoss
-from permutations.logger import GFlowLogger
-from permutations.metric import EmpiricalDistributionMetric
+from losses import GFlowLoss
+from logger import GFlowLogger
+from metric import EmpiricalDistributionMetric
 
 parser = argparse.ArgumentParser()
 
@@ -21,16 +21,17 @@ parser.add_argument("--sdb_eps", default=1.0, type=float)
 parser.add_argument("--sdb_beta", default=1.0, type=float)
 parser.add_argument("--sdb_alpha", default=2.0, type=float)
 parser.add_argument("--sdb_eta", default=0.001, type=float)
-parser.add_argument("--loss_scale", default=True, type=bool, action=argparse.BooleanOptionalAction) # log_scale or not
+parser.add_argument("--loss_scale", default="LogFlow", type=str) 
 parser.add_argument("--steps", default=100000, type=int)
 parser.add_argument("--save_dir", default="permutations/results", type=str)
 parser.add_argument("--reward", default="sum", type=str)
-parser.add_argument("--t", default=4.0, type=float)
+parser.add_argument("--t", default=2.0, type=float)
 parser.add_argument("--seed", default=1337, type=int)
 
 
 def to_ohe(states, bs):
     return torch.nn.functional.one_hot(states).reshape(bs, -1).to(torch.float32)
+
 
 def train(model, opt, log_Z_opt, log_Z, device, args):
     logger = GFlowLogger(save_dir=args.save_dir, args=args)
@@ -63,10 +64,11 @@ def train(model, opt, log_Z_opt, log_Z, device, args):
         logits = None
 
         # compute first step loss 
-        
+    
         logits = model(to_ohe(states, args.batch_size).detach())
+    
         log_flows = logits[:, -1]
-        backward_logits = logits[:, args.p:-1]
+        backward_logits = logits[:, args.p + 1:-1]
         backward_log_probs = torch.nn.functional.log_softmax(backward_logits, dim=-1)
         backward_stop_log_probs = backward_log_probs[:, -1]
         loss += loss_func(log_flow=log_Z.sum() * torch.ones_like(backward_stop_log_probs).to(device),
@@ -80,7 +82,7 @@ def train(model, opt, log_Z_opt, log_Z, device, args):
         
         # we sample trajectories and compute loss simultaneously
         while not all(dones):
-            forward_logits = logits[:, :args.p] # all actions + stop action
+            forward_logits = logits[:, :args.p + 1] # all actions + stop action
             log_flows = logits[:, -1] 
 
             # sample batch of actions
@@ -91,9 +93,9 @@ def train(model, opt, log_Z_opt, log_Z, device, args):
                 
             log_rewards = env.batch_log_reward(states)
             dones_new = dones.clone()
-            dones_new[actions == args.p - 1] = True
+            dones_new[actions == args.p] = True
             next_states = states.clone()
-            next_states[~dones_new] = env.get_next_state(states[~dones_new], actions[~dones_new])
+            next_states[~dones_new] = env.get_next_state_extended(states[~dones_new], actions[~dones_new])
             assert next_states.sum() == args.batch_size * (args.p - 1) * args.p // 2        
             # compute log forward policy
             
@@ -104,7 +106,7 @@ def train(model, opt, log_Z_opt, log_Z, device, args):
             log_flows_next = new_logits[:, -1]
             log_flows_next[dones_new] = log_rewards[dones_new]
 
-            backward_logits = new_logits[:, args.p:-1]
+            backward_logits = new_logits[:, args.p + 1:-1]
             log_pbs = backward_logits[range(args.batch_size), actions] - torch.logsumexp(backward_logits, dim=-1)
             log_pbs[dones_new] *= 0.0
             
@@ -128,7 +130,7 @@ def train(model, opt, log_Z_opt, log_Z, device, args):
         opt.step()
         log_Z_opt.step()
             
-        if (it + 1) % 100 == 0:
+        if (it + 1) % 500 == 0:
             mean_reward += [np.mean(reward_history[-1000:])]
             mean_traj_len_history += [np.mean(traj_len_history[-1000:])]
             log_Z_history += [log_Z.cpu().detach().sum().item()]
@@ -157,12 +159,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
+    
     model = nn.Sequential(
         nn.Linear(args.p*args.p, args.hidden_size),
         nn.LeakyReLU(),
         nn.Linear(args.hidden_size, args.hidden_size),
         nn.LeakyReLU(),
-        nn.Linear(args.hidden_size, 2*args.p + 1)
+        nn.Linear(args.hidden_size, 2*args.p + 3)
     )
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)

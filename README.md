@@ -38,7 +38,7 @@ python run.py --dim 4 --side 20 --loss DB --loss_scale LogFlow --reg_coef 0.001 
 Example of training with `DB` loss in `log-flow` scale and `state flow regularization` with strength $\lambda = 0.001$:
 
 ```
-python permutations.py --p 4 --loss DB --loss_scale True --reg_coef 0.001 --name db_example --save_dir example_dir
+python permutations.py --p 4 --loss DB --loss_scale LogFlow --reg_coef 0.001 --name db_example --save_dir example_dir
 ```
 
 For the full list of arguments for some particular script please refer to the script itself. 

@@ -1,7 +1,7 @@
 import torch 
 class SDBLoss:    
     def __call__(self, log_forward, log_backward, log_flow, log_flow_next, loss_mask, args, is_first=True):
-        if args.loss_scale:
+        if args.loss_scale == "LogFlow":
             inn = torch.abs(log_flow + log_forward - \
                                                 log_flow_next - log_backward) ** args.sdb_alpha
             
@@ -19,7 +19,7 @@ class SDBLoss:
     
 class DBLoss:
     def __call__(self, log_forward, log_backward, log_flow, log_flow_next, loss_mask, args, is_first=True):
-        if args.loss_scale:
+        if args.loss_scale == "LogFlow":
             reg = args.reg_coef * torch.exp(log_flow_next) if is_first else args.reg_coef * torch.exp(log_flow)
             inn = (log_flow + log_forward - log_flow_next - log_backward) ** 2 + reg
             step_losses = (inn * loss_mask)
